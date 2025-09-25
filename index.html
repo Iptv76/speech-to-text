@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4285F4">
+    <title>Prueba de Web Speech API</title>
+    <!-- Azure Speech SDK -->
+    <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+    
+    <!-- FontAwesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4285F4;
+            --primary-dark: #3367D6;
+            --primary-light: #E8F0FE;
+            --secondary: #34A853;
+            --secondary-light: #E6F4EA;
+            --accent: #FBBC05;
+            --accent-light: #FEF7E0;
+            --danger: #EA4335;
+            --danger-light: #FCE8E6;
+            --text: #202124;
+            --text-secondary: #5F6368;
+            --background: #F8F9FA;
+            --card-bg: #ffffff;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.15);
+            --border-radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', 'Roboto', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0;
+            margin: 0;
+            background-image: linear-gradient(135deg, var(--primary-light) 0%, var(--background) 100%);
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        header {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: var(--shadow);
+            background-image: linear-gradient(to right, var(--primary), var(--primary-dark));
+            margin-bottom: 2rem;
+        }
+        
+        header h1 {
+            font-weight: 700;
+            font-size: 1.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 15px;
+            background-color: rgba(255, 255, 255, 0.25);
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .status-indicator i {
+            margin-right: 6px;
+        }
+
+        .status-indicator.listening {
+            background-color: rgba(16, 124, 16, 0.9);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 124, 16, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 124, 16, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 124, 16, 0); }
+        }
+
+        .transcription-area {
+            width: 100%;
+            border: none;
+            border-radius: var(--border-radius);
+            min-height: 200px;
+            padding: 25px;
+            background-color: var(--card-bg);
+            font-size: 18px;
+            line-height: 1.6;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .transcription-area.recording {
+            border-left: 4px solid var(--success);
+            box-shadow: 0 0 15px rgba(16, 124, 16, 0.2);
+        }
+
+        .mic-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 25px auto;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            background-image: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        }
+
+        .mic-button:focus {
+            outline: none;
+        }
+
+        .mic-button:hover {
+            background-color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 120, 212, 0.2);
+        }
+
+        .mic-button.recording {
+            background-color: var(--success);
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 6px 16px rgba(16, 124, 16, 0.3);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 124, 16, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 124, 16, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 124, 16, 0); }
+        }
+
+        .mic-button i {
+            font-size: 30px;
+            color: var(--secondary);
+            transition: all 0.3s ease;
+        }
+
+        .mic-button.recording i {
+            color: white;
+        }
+
+        .mic-label {
+            font-size: 14px;
+            color: var(--secondary);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .debug-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: var(--border-radius);
+            font-size: 12px;
+            width: 100%;
+            max-height: 100px;
+            overflow-y: auto;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Prueba de Web Speech API</h1>
+        </header>
+        
+        <div id="transcriptionArea" class="transcription-area">
+            <p id="transcriptionText">Presiona el botón del micrófono y comienza a hablar...</p>
+        </div>
+        
+        <div id="errorMessage" class="error-message"></div>
+        
+        <button id="micButton" class="mic-button">
+            <i class="fas fa-microphone"></i>
+        </button>
+        
+        
+        <div id="debugInfo" class="debug-info">
+            Información de depuración
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let isListening = false;
+        let recognitionActive = false;
+        let transcriptionData = '';
+        let deviceType = 'unknown';
+        let networkStatus = 'online';
+        let isSTBEnvironment = false;
+        let useAzureFallback = true; // Habilitar fallback a Azure
+        let azureConfigured = false;
+        let azureSpeechConfig = null;
+        let azureRecognizer = null;
+        
+        // Elementos del DOM
+        const micButton = document.getElementById('micButton');
+        const micLabel = document.getElementById('micLabel');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const transcriptionArea = document.getElementById('transcriptionArea');
+        const transcriptionText = document.getElementById('transcriptionText');
+        const debugInfo = document.getElementById('debugInfo');
+        const errorMessage = document.getElementById('errorMessage');
+        const deviceTypeElement = document.getElementById('deviceType');
+        
+        // Se ha eliminado la función handleManualSubmit y todas las referencias a manualInput
+        
+        // Constantes
+        const MAX_RECOGNITION_ATTEMPTS = 10; // puede hacer 10 busquedas
+        const RESTART_DELAY = 1000; // ms
+        const AZURE_KEY = 'DaEEh13ubbweNYuTG777Kl6JI1rUSm6OLPDqwdKOrLwDFbGpksTdJQQJ99BEACHYHv6XJ3w3AAAYACOGywVV'; 
+        const AZURE_REGION = 'eastus';
+        const AZURE_ENDPOINT = 'https://eastus.api.cognitive.microsoft.com/';
+        
+        // Función para manejar los eventos de transcripción del STB
+        function handleTranscriptionEvent(event) {
+            if (event && event.data && typeof event.data === 'string') {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // Verificamos si es un evento de transcripción
+                    if (data.type === 'transcript' && data.text) {
+                        transcriptionData = data.text;
+                        transcriptionText.innerHTML = transcriptionData;
+                        logDebug(`Transcripción recibida: ${transcriptionData}`);
+                        
+                        // Ejecutar comandos SAIA si se detectan en la transcripción
+                        if (isSTBEnvironment && typeof STBOutput !== 'undefined') {
+                            if (transcriptionData.toLowerCase().includes('saia transcript')) {
+                                logDebug(`EJECUTANDO COMANDO SAIA: saia.start transcript`);
+                                STBOutput.getInstance().makeRequestWs("saia.start", {"type":"transcript"})
+                                .then(response => {
+                                    logDebug(`RESPUESTA SAIA: ${JSON.stringify(response)}`);
+                                })
+                                .catch(error => {
+                                    logDebug(`ERROR SAIA: ${error}`);
+                                });
+                            }
+                        }
+                    }
+                    
+                    // Si es una respuesta a un comando SAIA
+                    if (data.type === 'response' && data.command) {
+                        logDebug(`RESPUESTA COMANDO SAIA [${data.command}]: ${JSON.stringify(data)}`);
+                    }
+                } catch (error) {
+                    logDebug(`Error al procesar evento: ${error.message}`);
+                }
+            }
+        }
+        
+        // Configuramos el listener para eventos del STB
+        if (window.addEventListener) {
+            window.addEventListener('message', handleTranscriptionEvent, false);
+            logDebug('Listener de eventos configurado');
+        }
+        
+        // Función para mostrar mensajes de depuración
+        function logDebug(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            
+            // Destacar mensajes relacionados con SAIA
+            let formattedMessage = message;
+            if (message.includes('SAIA')) {
+                formattedMessage = `<span style="color: #4285F4; font-weight: bold;">${message}</span>`;
+            } else if (message.includes('ERROR')) {
+                formattedMessage = `<span style="color: #EA4335; font-weight: bold;">${message}</span>`;
+            } else if (message.includes('RESPUESTA')) {
+                formattedMessage = `<span style="color: #34A853; font-weight: bold;">${message}</span>`;
+            }
+            
+            debugInfo.innerHTML = `[${timestamp}] ${formattedMessage}<br>` + debugInfo.innerHTML;
+        }
+        
+        // Función para iniciar el cliente
+        function initializeClient() {
+            logDebug('Inicializando cliente...');
+            
+            try {
+                // Ejecutamos el comando real para iniciar el cliente
+                if (typeof STBOutput !== 'undefined' && STBOutput.getInstance) {
+                    STBOutput.getInstance().makeRequestWs("saia.get_status", {});
+                    logDebug('Comando ejecutado: STBOutput.getInstance().makeRequestWs("saia.get_status",{})');
+                } else {
+                    // Modo de simulación para pruebas en navegador normal
+                    logDebug('Modo simulación: STBOutput no disponible, simulando inicialización');
+                    setTimeout(() => {
+                        logDebug('Cliente simulado inicializado correctamente');
+                    }, 500);
+                }
+                
+                // Actualizamos la interfaz
+                statusIndicator.textContent = 'Cliente inicializado';
+                return true;
+            } catch (error) {
+                logDebug(`Error al inicializar cliente: ${error.message}`);
+                return false;
+            }
+        }
+        
+        // Función para abrir el micrófono y comenzar la transcripción
+        function startListening() {
+            if (isListening) return;
+            
+            logDebug('Abriendo micrófono...');
+            
+            try {
+                // Ejecutamos el comando para abrir el micrófono
+                if (typeof STBOutput !== 'undefined' && STBOutput.getInstance) {
+                    STBOutput.getInstance().makeRequestWs("saia.start", {"type":"transcript"});
+                    logDebug('Comando ejecutado: STBOutput.getInstance().makeRequestWs("saia.start",{"type":"transcript"})');
+                } else {
+                    // Modo de simulación para pruebas en navegador 
+                    logDebug('Modo simulación: STBOutput no disponible, simulando apertura de micrófono');
+                }
+                
+                // Actualizamos la interfaz
+                isListening = true;
+                micButton.classList.add('recording');
+                transcriptionArea.classList.add('recording');
+                statusIndicator.textContent = 'Escuchando...';
+                statusIndicator.classList.add('listening');
+                micLabel.textContent = 'Escuchando...';
+                
+                logDebug('Micrófono abierto, escuchando...');
+                
+                // Iniciamos el reconocimiento de voz
+                startSpeechRecognition();
+            } catch (error) {
+                logDebug(`Error al abrir micrófono: ${error.message}`);
+                showFallbackInput();
+            }
+        }
+        
+        // Función para mostrar entrada manual como fallback
+        function showFallbackInput() {
+            logDebug('Mostrando entrada manual como fallback');
+         
+        }
+        
+        // Función para detener la escucha
+        function stopListening() {
+            if (!isListening) return;
+            
+            logDebug('Deteniendo escucha...');
+            
+            try {
+                
+                isListening = false;
+                micButton.classList.remove('recording');
+                transcriptionArea.classList.remove('recording');
+                statusIndicator.textContent = 'Listo';
+                statusIndicator.classList.remove('listening');
+                micLabel.textContent = 'Presiona para hablar';
+                
+                // Detenemos el reconocimiento de voz
+                if (recognitionActive) {
+                    stopSpeechRecognition();
+                }
+                
+                logDebug('Escucha detenida');
+            } catch (error) {
+                logDebug(`Error al detener escucha: ${error.message}`);
+            }
+        }
+        
+        // Reconocimiento de voz usando Web Speech API con manejo de errores 
+        let recognition;
+        let recognitionAttempts = 0;
+        
+        function startSpeechRecognition() {
+            // Verificamos si el navegador soporta la API
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                logDebug('API de reconocimiento de voz no soportada en este navegador');
+                transcriptionText.innerHTML = "Tu navegador no soporta reconocimiento de voz. Por favor usa Chrome, Edge o Safari.";
+                return;
+            }
+            
+            // Verificar conexión a internet antes de iniciar
+            if (networkStatus === 'offline') {
+                logDebug('Sin conexión a internet');
+                transcriptionText.innerHTML = "Sin conexión a internet. Verifica tu conexión y vuelve a intentarlo.";
+                return;
+            }
+            
+            // Reiniciamos el contador de intentos
+            recognitionAttempts = 0;
+            
+            // Iniciamos el reconocimiento con manejo de errores
+            startRecognitionWithErrorHandling();
+        }
+        
+        // Inicializar Azure Speech si está configurado
+        function initializeAzureSpeech() {
+            if (!AZURE_KEY || AZURE_KEY === '') {
+                logDebug('Azure Speech no configurado (falta clave)');
+                return false;
+            }
+            
+            try {
+                const SpeechSDK = window.SpeechSDK;
+                if (!SpeechSDK) {
+                    logDebug('Azure Speech SDK no cargado');
+                    return false;
+                }
+                
+                azureSpeechConfig = SpeechSDK.SpeechConfig.fromSubscription(AZURE_KEY, AZURE_REGION);
+                azureSpeechConfig.speechRecognitionLanguage = 'es-ES';
+                azureSpeechConfig.endpointId = AZURE_ENDPOINT;
+                azureConfigured = true;
+                logDebug('Azure Speech configurado correctamente con endpoint: ' + AZURE_ENDPOINT);
+                return true;
+            } catch (error) {
+                logDebug('Error al configurar Azure Speech: ' + error.message);
+                return false;
+            }
+        }
+        
+        function startRecognitionWithErrorHandling() {
+            // Si excedimos el número máximo de intentos, detenemos
+            if (recognitionAttempts >= MAX_RECOGNITION_ATTEMPTS) {
+                logDebug(`Demasiados intentos fallidos (${MAX_RECOGNITION_ATTEMPTS}). Deteniendo reconocimiento.`);
+                transcriptionText.innerHTML = "No se pudo iniciar el reconocimiento de voz después de varios intentos. Por favor, verifica tu conexión a internet y los permisos del micrófono.";
+                stopListening();
+                return;
+            }
+            
+            // Incrementamos el contador de intentos
+            recognitionAttempts++;
+            
+            // Creamos una nueva instancia de reconocimiento
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'es-ES';
+            recognition.continuous = false; // Cambiado a false para evitar errores de red continuos
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 3; // Aumentado para mejorar precisión
+            
+            // Ajustes específicos según el dispositivo
+            if (deviceType === 'móvil' || deviceType === 'tablet') {
+                // En dispositivos móviles, limitamos el tiempo de reconocimiento
+                recognition.maxAlternatives = 1;
+            }
+            
+            recognition.onstart = function() {
+                recognitionActive = true;
+                logDebug('Reconocimiento de voz iniciado');
+            };
+            
+            recognition.onresult = function(event) {
+                // Reiniciamos el contador de intentos cuando obtenemos resultados
+                recognitionAttempts = 0;
+                // Indicamos que hay conexión activa
+                networkStatus = 'online';
+                
+                let interimTranscript = '';
+                let finalTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // Actualizamos el texto de la transcripción
+                if (finalTranscript !== '') {
+                    transcriptionText.innerHTML = finalTranscript;
+                    logDebug(`Transcripción final: ${finalTranscript}`);
+                } else if (interimTranscript !== '') {
+                    transcriptionText.innerHTML = interimTranscript;
+                }
+            };
+            
+            recognition.onerror = function(event) {
+                logDebug(`Error en reconocimiento: ${event.error}`);
+                
+                // Manejamos diferentes tipos de errores
+                switch(event.error) {
+                    case 'network':
+                        transcriptionText.innerHTML = "Error de red. Verificando conexión...";
+                        // Verificar si realmente hay conexión a internet
+                        if (navigator.onLine) {
+                            logDebug('Navegador reporta conexión a internet, pero hay error de red en reconocimiento');
+                            
+                            // Intentar usar Azure como fallback si está habilitado y configurado
+                            if (useAzureFallback && !azureConfigured) {
+                                // Intentar inicializar Azure si no se ha hecho
+                                azureConfigured = initializeAzureSpeech();
+                            }
+                            
+                            if (useAzureFallback && azureConfigured) {
+                                logDebug('Usando Azure Speech como fallback');
+                                transcriptionText.innerHTML = "Cambiando a Azure Speech...";
+                                startAzureSpeechRecognition();
+                                return;
+                            }
+                            
+                            // Si no podemos usar Azure, seguimos con el comportamiento normal
+                            const retryDelay = Math.min(1000 * recognitionAttempts, 5000);
+                            transcriptionText.innerHTML = "Problemas de conexión. Reintentando en " + (retryDelay/1000) + " segundos...";
+                            setTimeout(() => {
+                                if (isListening) startRecognitionWithErrorHandling();
+                            }, retryDelay);
+                        } else {
+                            networkStatus = 'offline';
+                            logDebug('Sin conexión a internet detectada');
+                            transcriptionText.innerHTML = "Sin conexión a internet. Verifica tu conexión y vuelve a intentarlo.";
+                        }
+                        break;
+                    case 'not-allowed':
+                    case 'service-not-allowed':
+                        transcriptionText.innerHTML = "Permiso de micrófono denegado. Por favor, permite el acceso al micrófono.";
+                        stopListening(); // Detenemos si no hay permisos
+                        showFallbackInput();
+                        break;
+                    case 'aborted':
+                        // No hacemos nada, es normal cuando se detiene manualmente
+                        break;
+                    default:
+                        // Para otros errores, intentamos usar Azure como fallback
+                        if (useAzureFallback && azureConfigured) {
+                            logDebug('Usando Azure Speech como fallback para error: ' + event.error);
+                            transcriptionText.innerHTML = "Cambiando a Azure Speech...";
+                            startAzureSpeechRecognition();
+                            return;
+                        }
+                        
+                        // Si no podemos usar Azure, mostramos un mensaje genérico
+                        transcriptionText.innerHTML = "Error en el reconocimiento de voz. Reintentando...";
+                }
+            };
+            
+            recognition.onend = function() {
+                recognitionActive = false;
+                logDebug('Reconocimiento de voz finalizado');
+                
+                // Si todavía estamos en modo de escucha, reiniciamos el reconocimiento
+                // con un pequeño retraso para evitar bucles de error
+                if (isListening) {
+                    // Retraso adaptativo basado en el número de intentos y tipo de dispositivo
+                    const baseDelay = deviceType === 'móvil' ? 1500 : 300;
+                    const delay = baseDelay * Math.min(recognitionAttempts, 3);
+                    
+                    setTimeout(() => {
+                        startRecognitionWithErrorHandling();
+                    }, delay);
+                }
+            };
+            
+            // Función para iniciar el reconocimiento con Azure Speech
+            function startAzureSpeechRecognition() {
+                if (!azureConfigured) {
+                    logDebug('Azure Speech no está configurado');
+                    return;
+                }
+                
+                try {
+                    const SpeechSDK = window.SpeechSDK;
+                    const audioConfig = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+                    azureRecognizer = new SpeechSDK.SpeechRecognizer(azureSpeechConfig, audioConfig);
+                    
+                    logDebug('Iniciando reconocimiento con Azure Speech');
+                    transcriptionText.innerHTML = "Escuchando con Azure Speech...";
+                    
+                    azureRecognizer.recognizing = (s, e) => {
+                        if (e.result.reason === SpeechSDK.ResultReason.RecognizingSpeech) {
+                            transcriptionText.innerHTML = e.result.text;
+                        }
+                    };
+                    
+                    azureRecognizer.recognized = (s, e) => {
+                        if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+                            transcriptionText.innerHTML = e.result.text;
+                            logDebug('Azure Speech reconocido: ' + e.result.text);
+                        }
+                    };
+                    
+                    azureRecognizer.canceled = (s, e) => {
+                        if (e.reason === SpeechSDK.CancellationReason.Error) {
+                            logDebug('Error en Azure Speech: ' + e.errorDetails);
+                            // Volver a Web Speech API después de un error
+                            setTimeout(() => {
+                                if (isListening) startRecognitionWithErrorHandling();
+                            }, RESTART_DELAY);
+                        }
+                    };
+                    
+                    azureRecognizer.sessionStopped = (s, e) => {
+                        logDebug('Sesión de Azure Speech finalizada');
+                        azureRecognizer.close();
+                        azureRecognizer = null;
+                        
+                        // Volver a Web Speech API después de completar
+                        setTimeout(() => {
+                            if (isListening) startRecognitionWithErrorHandling();
+                        }, RESTART_DELAY);
+                    };
+                    
+                    azureRecognizer.startContinuousRecognitionAsync();
+                    
+                } catch (error) {
+                    logDebug('Error al iniciar Azure Speech: ' + error.message);
+                    // Volver a Web Speech API después de un error
+                    setTimeout(() => {
+                        if (isListening) startRecognitionWithErrorHandling();
+                    }, RESTART_DELAY);
+                }
+            }
+            
+            try {
+                recognition.start();
+            } catch (error) {
+                logDebug(`Error al iniciar reconocimiento: ${error.message}`);
+                transcriptionText.innerHTML = "Error al iniciar el reconocimiento de voz. Reintentando...";
+                
+                // Reintentamos después de un breve retraso
+                setTimeout(() => {
+                    if (isListening) {
+                        startRecognitionWithErrorHandling();
+                    }
+                }, 1000);
+            }
+        }
+        
+        function stopSpeechRecognition() {
+            // Detener Web Speech API
+            if (recognition) {
+                try {
+                    recognition.stop();
+                    recognitionActive = false;
+                    logDebug('Reconocimiento de voz detenido');
+                } catch (error) {
+                    logDebug(`Error al detener reconocimiento: ${error.message}`);
+                }
+            }
+            
+            // Detener Azure Speech si está activo
+            if (azureRecognizer) {
+                try {
+                    azureRecognizer.stopContinuousRecognitionAsync(
+                        function() {
+                            logDebug('Azure Speech detenido correctamente');
+                            azureRecognizer.close();
+                            azureRecognizer = null;
+                        },
+                        function(err) {
+                            logDebug('Error al detener Azure Speech: ' + err);
+                            azureRecognizer = null;
+                        }
+                    );
+                } catch (e) {
+                    logDebug('Error al detener Azure Speech: ' + e.message);
+                }
+            }
+        }
+        
+        // Función para alternar entre iniciar y detener la escucha
+        function toggleListening() {
+            if (isListening) {
+                stopListening();
+            } else {
+                // Inicializamos el cliente si no está inicializado
+                if (initializeClient()) {
+                    startListening();
+                }
+            }
+        }
+        
+        // Event listeners
+        micButton.addEventListener('click', toggleListening);
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            logDebug('Aplicación cargada. Presiona el botón del micrófono para comenzar.');
+        });
+    </script>
+</body>
+</html>
